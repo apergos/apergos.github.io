@@ -1,0 +1,482 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN\ http://www.w3.org/TR/html4/strict.dtd">
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Bingo Card</title>
+    <style type="text/css">
+      body {
+	     font-size: 12px;
+	     font-weight: bold;
+	     background-image:url(trump_bg.jpg);
+	     background-color: #ffffff;
+      }
+      div#termsinputs {
+	  display: grid;
+	  grid-template-columns: auto auto;
+	  justify-content: center;
+	  grid-gap: 10px 20px;
+	  margin-bottom: 20px;
+	  align-items: center;
+      }
+      table.bingo { margin: 20px auto; border-spacing: 2px; }
+      tr.bingo { height: 100px; }
+      td.unmarked, td.marked { text-align: center; border: thin black solid; padding: 10px; width: 100px; }
+      textarea {
+	  display: block;
+	  margin-left: auto;
+	  margin-right: auto;
+	  padding: 5px;
+	  margin-top: 10px;
+	  margin-bottom: 10px;
+      }
+      div.reloader { width: 650px; text-align: left; cursor: pointer; }
+      div.termsform { display:none; }
+      button.reloader, button.cheat, button.newform {
+ 	  border: 0px;
+ 	  background:none!important;
+ 	  color:inherit;
+ 	  cursor: pointer;
+      }
+      button.submitter {
+	  border: 1px;
+	  background:#dddddd!important;
+	  color:inherit;
+	  cursor: pointer;
+      }
+    </style>
+    <script>
+      var card = {}
+      var defaults = {
+	  heading: "Bingo Card",
+	  color: "#ffcc99",
+	  bgimage: "wtf_bg.jpg",
+	  freespace: "FREE SPACE"
+      }
+      var terms = [];
+      var bingoFreeSpace = defaults.freespace
+      var defaultAlpha = "66"
+      var markedCellColor = defaults.color + defaultAlpha;
+      var unmarkedCellColor = "#ffffff66";
+
+      var impeachTerms = "No collusion!\nCrooked Hillary\nHer emails\nTreason!\nDemocrat crimes\nNo obstruction\nConflict of interest\nPresidential harrassment\nRussia hoax\nFake news\nDemocrat obstructionists\nDoing a great job\nAttempted coup/takedown\nNo redo of Mueller report\nMost transparent President\nBest numbers for jobs or unemployment\nOut to get us\n18 Trump haters\nI could have stopped everything\n___ testified for 20/30 hours\nCase closed\nAngry Democrats\nBigger than Watergate\nSpied on my campaign\n";
+      var corpbuzzTerms = "pivot\naccountabilities\nleveraging\npolarities\ngenerative\nlean into\nparadigm\nasks (noun)\ndisruption\nconvenorship\nstrategist\nresourcing\nconvergence\nconsumption experience\nannualize\nresource (verb)\nemerging markets\nbrand strategy\n____ as a service\nconversion\nstrategic direction\necosystem\nglobal community\nmission-aligned\n";
+      var niceTerms = "Ice chocolate\nWalk in a garden\nRead a good story\nMake fun art\nListen to music\nSing a song\nBake bread\nMohito\nPet a kitty\nHug a doggo\nPhoto shoot\nSmoothie\nLaugh with friends\nCheesy poofs\nWrite fun code\nSiesta!\nWatch a good movie\nLearn a new word\nWrite a poem\nGive something away\nStar/moon-gazing\nMake a bad pun\nPlaytime!\nCold shower\n";
+      var borderTerms = "National emergency\nVery bad people\nHuman trafficking\nMS-13/Gang members\n4,000 terrorists\nInvasion\nDrugs pouring in\nGreat steel business, workers\nNorth Korea/China, we're doing very well\nI know more about ___ than anyone\nI've done a great job\nIncredible job growth, numbers\n[Migrants] make a left/right turn\nI don't call it a shutdown\nBuilt a lot of the Wall already\nIf you look at Israel, walls work\nMexico is paying for the Wall\nHumanitarian crisis\nIt's destroying our country\nCountries take advantage of us\nGreatest tax cuts ever\nEnemy of the People\nFake News\nSteel barrier instead of concrete\nMigrant caravan\nCatch and release\nWomen with duct tape\nMedieval solution\n";
+
+      var presets = {
+	  impeach: {
+	      terms: impeachTerms,
+	      freespace: "WITCH HUNT!",
+	      heading: "Impeachment Bingo",
+	      color: "#ffcc99",
+	      bgimage: "trump_bg.jpg"
+	  },
+	  corpbuzz: {
+	      terms: corpbuzzTerms,
+	      freespace: "IDEATE!",
+	      heading: "Corporate Buzzword Bingo",
+	      color: "#EBA5D5",
+	      bgimage: "corpbuzz_bg.jpg"
+	  },
+	  nice: {
+	      terms: niceTerms,
+	      freespace: "Punch a Nazi",
+	      heading: "A Nice Day",
+	      color: "#21702A",
+	      bgimage: "nice_bg.jpg"
+	  },
+	  border: {
+	      terms: borderTerms,
+	      freespace: "FREE SPACE",
+	      heading: "Presidential Border Bingo",
+	      color: "#ffcc99",
+	      bgimage: "trump_bg.jpg"
+	  },
+      }
+
+      function init() {
+	  card = {
+	      termsForm: document.getElementById('termsform'),
+	      termsInputs: document.getElementById('termsinputs'),
+	      terms: document.getElementById('terms'),
+	      heading: document.getElementById("heading"),
+	      color: document.getElementById("color"),
+	      bgimage: document.getElementById("bgimage"),
+	      freespace: document.getElementById("freespace"),
+	      cardPage: document.getElementById("cardpage"),
+	      bingoCard: document.getElementById("bingocard"),
+	      bingoH1: document.getElementById("bingoheader"),
+	      bingoTable: document.getElementById('bingotable'),
+	      htmlCells: document.getElementById('bingotable').getElementsByTagName('td')
+	  }
+	  setupPage();
+      }
+
+      function shuffle(array) {
+	  // stolen from stackoverflow, see
+	  // https://stackoverflow.com/questions/18806210/generating-non-repeating-random-numbers-in-js
+	  var i = array.length;
+	  var j = 0;
+	  var temp;
+
+	  while (i--) {
+              j = Math.floor(Math.random() * (i+1));
+
+              // swap randomly chosen element with current element
+              temp = array[i];
+              array[i] = array[j];
+              array[j] = temp;
+	  }
+	  return array;
+      }
+
+      function setDefaults() {
+	  card['heading'].value = defaults.heading
+	  card['color'].value = defaults.color
+	  card['bgimage'].value = defaults.bgimage
+	  card['freespace'].value = defaults.freespace
+      }
+
+      function hideBingoCard() {
+	  card['cardPage'].style.display = "none";
+	  card['bingoCard'].style.display = "none";
+      }
+
+      function showBingoCard() {
+	  card['cardPage'].style.display = "block";
+	  card['bingoCard'].style.display = "block";
+      }
+
+      function showTermsForm() {
+	  card['termsInputs'].style.display = 'grid';
+	  card['termsForm'].style.display = 'block';
+	  card['terms'].style.display = 'block';
+      }
+
+      function hideTermsForm() {
+	  card['termsInputs'].style.display = 'none';
+	  card['termsForm'].style.display = 'none';
+	  card['terms'].style.display = 'none';
+      }
+
+      function getTermsFromForm() {
+	  // grab the terms out of the form and turn them into
+	  // the term array if there are 24 or more of them
+	  // if there are too few terms, whine and leave the form with
+	  // its current content
+	  // if there are enough terms, show the bingo card with those terms
+
+	  formText = card['terms'].value;
+	  formParamsUnfiltered = formText.split(/\r?\n/);
+          // get rid of any empty ones, people love to leave blank lines
+	  formParams = formParamsUnfiltered.filter(Boolean);
+
+	  if (formParams.length < 24) {
+	      alert("Not enough items, 24 minimum needed");
+	  } else {
+	      terms = formParams;
+	      hideTermsForm();
+	      document.title.value = card['heading'].value
+	      card['bingoH1'].innerHTML = card['heading'].value
+	      markedCellColor = card['color'].value + defaultAlpha;
+	      if (markedCellColor == "#00000066") {
+		  // we got a garbage color for whatever reason
+		  markedCellColor = defaults.color + defaultAlpha;
+	      }
+	      document.body.style.backgroundImage = "url('" + card['bgimage'].value + "')";
+	      bingoFreeSpace = card["freespace"].value
+	      setupCard();
+	      showBingoCard();
+	  }
+      }
+
+      function getParamsFromUrl() {
+	  // expect ?terms= and then a bunch of strings which may not have
+	  // & or / or <> in them
+	  var params = [];
+	  return params;
+      }
+
+      function newForm() {
+	  terms = [];
+	  hideBingoCard();
+	  showTermsForm();
+      }
+
+      function setupPage() {
+	  // terms in the url will override any others
+	  // terms var is checked next
+	  // last resort, ask the user
+	  // if not enough terms are provided, whine, but leave
+	  // form content there if any
+	  // if we have enough terms from any source, set up the card
+	  params = getParamsFromUrl();
+	  if (params.length == 0) {
+	      if (terms.length == 0) {
+		  hideBingoCard();
+		  showTermsForm();
+	      } else if (terms.length < 24) {
+		  alert("Not enough items, 24 minimum needed");
+		  hideBingoCard();
+		  showTermsForm();
+	      } else {
+		  setupCard();
+		  hideTermsForm();
+		  showBingoCard();
+	      }
+	  } else if (params.length < 24) {
+	      alert("Not enough items, 24 minimum needed");
+	      showTermsForm();
+	  } else {
+	      terms = params;
+	      setupCard();
+	      hideTermsForm();
+	      showBingoCard();
+	  }
+      }
+
+      function setupCard() {
+	  var i, j;
+
+	  // generate an ordering of the items to go on the card
+	  toShuffle = []
+	  for (i=0; i<terms.length; i++) {
+	      toShuffle.push(i);
+	  }
+	  var randomOrder = shuffle(toShuffle);
+
+	  // fill in the text in the table cells
+	  var bingoTable = document.getElementById('bingotable')
+	  for (i = 0; i < card['htmlCells'].length; i++) {
+	      if (i < 12) {
+		  card['htmlCells'][i].innerHTML = terms[randomOrder[i]];
+		  card['htmlCells'][i].className = 'unmarked bingo';
+		  card['htmlCells'][i].style.backgroundColor = unmarkedCellColor;
+	      } else if (i == 12) {
+		  card['htmlCells'][i].innerHTML = bingoFreeSpace;
+		  card['htmlCells'][i].className = 'marked bingo';
+		  card['htmlCells'][i].style.backgroundColor = markedCellColor;
+	      } else if (i > 12) {
+		  card['htmlCells'][i].innerHTML = terms[randomOrder[i-1]];
+		  card['htmlCells'][i].className = 'unmarked bingo';
+		  card['htmlCells'][i].style.backgroundColor = unmarkedCellColor;
+	      }
+	  }
+      }
+
+      function usePresets(presetGroup) {
+	  card['heading'].value = presets[presetGroup].heading;
+	  card['color'].value = presets[presetGroup].color;
+	  card['bgimage'].value = presets[presetGroup].bgimage;
+	  card['freespace'].value = presets[presetGroup].freespace;
+	  card['terms'].value = presets[presetGroup].terms;
+      }
+
+      function changeCellColor(i) {
+	  // center square must always be marked, it's the free space
+	  if (i == 12) {
+	      card['htmlCells'][i].style.backgroundColor = markedCellColor;
+	      return;
+	  }
+	  if (card['htmlCells'][i].className == 'unmarked bingo') {
+	      card['htmlCells'][i].className = 'marked bingo';
+	      card['htmlCells'][i].style.backgroundColor = markedCellColor;
+	  } else {
+	      card['htmlCells'][i].className = 'unmarked bingo';
+	      card['htmlCells'][i].style.backgroundColor = unmarkedCellColor;
+	  }
+      }
+
+      function getIndex(rowColDiag, i) {
+	  // given row, column or diag, and a count of how far
+	  // into the row/col/diag we are, get the cell index from 0
+	  // to 24 starting at upper left...
+	  if (rowColDiag[0] == 'r') {
+	      return((rowColDiag[1]-1)*5 + i);
+	  } else if (rowColDiag[0] == 'c') {
+	      return(i*5 + (rowColDiag[1]-1));
+	  } else {
+	      // diagonals
+	      if (rowColDiag[1] == 1) {
+		  return(6*i);
+	      } else {
+		  return(4*i);
+	      }
+	  }
+      }
+
+      function filter(cells, rowColDiag) {
+	  var filtered = []
+	  for (i=0; i < cells.length; i++) {
+	      if (rowColDiag[0] == 'r') {
+		  if (cells[i]<(rowColDiag[1]-1)*5 || cells[i]>=rowColDiag[1]*5) {
+		      filtered.push(cells[i]);
+		  }
+	      } else if (rowColDiag[0] == 'c') {
+		  if ((cells[i]-(rowColDiag[1]-1))%5) {
+		      filtered.push(cells[i]);
+		  }
+	      } else if (rowColDiag[1] == '1') {
+		  // diag 1
+		  if (cells[i]%6) {
+		      filtered.push(cells[i]);
+		  }
+	      } else {
+		  // diag 2
+		  if (cells[i]%4 || cells[i] == 0 || cells[i] == 24) {
+		      filtered.push(cells[i]);
+		  }
+	      }
+	  }
+	  return(filtered);
+      }
+
+      function cheat() {
+	  var markedCells = [];
+	  var squareCount = 0;
+
+	  for (i=0; i<card['htmlCells'].length; i++) {
+	      if (i == 12) {
+		  // don't count the free space!
+		  continue;
+	      }
+	      if (card['htmlCells'][i].className == 'marked bingo') {
+		  markedCells.push(i);
+	      }
+	  }
+	  if (markedCells.length < 10) {
+	      alert("No cheating unless you've checked 10 squares!");
+	      return;
+	  }
+	  // choose a random row, column or diagonal along which to
+	  // arrange some of the marked squares
+	  choices = ['r1','r2','r3','r4', 'r5','c1','c2','c3','c4','c5','d1','d2'];
+	  chosen = choices[Math.floor(Math.random() * (choices.length + 1))];
+
+	  var shuffledMarkedOrder = shuffle(markedCells);
+	  // drop marked cells in the row/col/diag we are going to replace
+	  // since we can't 'swap them in' for unmarked cells in the same line
+	  filteredMarkedOrder = filter(shuffledMarkedOrder, chosen)
+
+	  var temp = "";
+	  var chosenIndex = 0;
+	  for (i=0; i<5; i++) {
+	      // swap the text of the element currently in the row/column we are about
+	      // to make the 'bingo' row/column, with the text of the element already marked
+	      chosenIndex = getIndex(chosen, i);
+	      if (card['htmlCells'][chosenIndex].className == 'marked bingo') {
+		  // don't swap something into a cell if it's already ok
+		  // conveniently this also skips the free space
+		  continue;
+	      }
+
+	      temp = card['htmlCells'][chosenIndex].innerHTML;
+	      card['htmlCells'][chosenIndex].innerHTML = card['htmlCells'][filteredMarkedOrder[i]].innerHTML;
+	      card['htmlCells'][filteredMarkedOrder[i]].innerHTML = temp;
+	      // swap the classes too
+	      temp = card['htmlCells'][chosenIndex].className;
+	      card['htmlCells'][chosenIndex].className = card['htmlCells'][filteredMarkedOrder[i]].className;
+	      card['htmlCells'][filteredMarkedOrder[i]].className = temp;
+	      // and lastly mark the cells the right colors
+	      card['htmlCells'][chosenIndex].style.backgroundColor = markedCellColor;
+	      card['htmlCells'][filteredMarkedOrder[i]].style.backgroundColor = unmarkedCellColor;
+	  }
+      }
+    </script>
+  </head>
+  <body onload="init();">
+    <div class="cardpage" id="cardpage">
+      <center><h1 id="bingoheader">Bingo Card</h1></center>
+      <center>
+	<div class="reloader"><button class="reloader" onclick="setupCard();">new card</button>|<button class="cheat" onclick="cheat();">cheat</button>|<button class="newform" onclick="newForm();">new form</button></div>
+      </center>
+      <div class="bingocard" id="bingocard">
+	<table class="bingo" id="bingotable">
+	  <tr class="bingo">
+	    <td onclick="changeCellColor(0);"></td>
+	    <td onclick="changeCellColor(1);"></td>
+	    <td onclick="changeCellColor(2);"></td>
+	    <td onclick="changeCellColor(3);"></td>
+	    <td onclick="changeCellColor(4);"></td>
+	  </tr>
+	  <tr class="bingo">
+	    <td onclick="changeCellColor(5);"></td>
+	    <td onclick="changeCellColor(6);"></td>
+	    <td onclick="changeCellColor(7);"></td>
+	    <td onclick="changeCellColor(8);"></td>
+	    <td onclick="changeCellColor(9);"></td>
+	  </tr>
+	  <tr class="bingo">
+	    <td onclick="changeCellColor(10);"></td>
+	    <td onclick="changeCellColor(11);"></td>
+	    <td></td>
+	    <td onclick="changeCellColor(13);"></td>
+	    <td onclick="changeCellColor(14);"></td>
+	  </tr>
+	  <tr class="bingo">
+	    <td onclick="changeCellColor(15);"></td>
+	    <td onclick="changeCellColor(16);"></td>
+	    <td onclick="changeCellColor(17);"></td>
+	    <td onclick="changeCellColor(18);"></td>
+	    <td onclick="changeCellColor(19);"></td>
+	  </tr>
+	  <tr class="bingo">
+	    <td onclick="changeCellColor(20);"></td>
+	    <td onclick="changeCellColor(21);"></td>
+	    <td onclick="changeCellColor(22);"></td>
+	    <td onclick="changeCellColor(23);"></td>
+	    <td onclick="changeCellColor(24);"></td>
+	  </tr>
+	</table>
+      </div>
+    </div>
+    <div class="termsform" id="termsform">
+      <center><h1>Bingo Card Terms Entry</h1></center>
+      <center>Enter at least 24 terms or short phrases, one per line, in the form below.</center>
+      <textarea class="termsform" rows="30" cols="45" id="terms"></textarea>
+      <div class="termsinputs" id="termsinputs">
+	<div>
+	  Bingo card title:
+	</div>
+	<div>
+	  <input type="text" name="heading" value="Bingo Card" maxlen="80" id="heading" />
+	</div>
+	<div>
+	  Color of checked bingo square:
+	</div>
+	<div>
+	  <input type="color" name="checkedcolor" value="#ffcc99" id="color"/>
+	</div>
+	<div>
+	  Background image for card (<a href="gallery.html">gallery</a>):
+	</div>
+	<div>
+	  <select id="bgimage">
+	    <option value="wtf_bg.jpg" selected>WTF</option>
+	    <option value="trump_bg.jpg">Trump</option>
+	    <option value="corpbuzz_bg.jpg">CorpBuzz</option>
+	    <option value="nice_bg.jpg">Flower</option>
+	  </select>
+	</div>
+	<div>
+	  Text for the free space:
+	</div>
+	<div>
+	  <input type="text" name="freespace" value="FREE SPACE" maxlen="50" id="freespace"/>
+	</div>
+      </div>
+      <center>
+	<hr style="width: 20%;"/>
+	<div>
+	  <button class="submitter" onclick="getTermsFromForm();">generate</button> |
+	  Presets: <button class="submitter" onclick="setDefaults();">defaults</button> *
+	  <button class="submitter" onclick="usePresets('impeach');">impeach</button> *
+	  <button class="submitter" onclick="usePresets('corpbuzz');">corpbuzz</button> *
+	  <button class="submitter" onclick="usePresets('nice');">nice day</button> *
+	  <button class="submitter" onclick="usePresets('border');">border bingo</button> |
+	  <a href="https://github.com/apergos/bingo">source code</a>
+	</div>
+      </center>
+    </div>
+  </body>
+</html>
